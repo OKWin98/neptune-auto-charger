@@ -2,8 +2,8 @@ name: Neptune Auto Charge
 
 on:
   # 定时运行：北京时间 6:05 = UTC 22:05（前一天）
-  schedule:
-    - cron: '5 22 * * *'
+repository_dispatch:
+    types: [auto_charge] # 自定义一个事件名称，一会儿外部触发要对暗号
 
   # 支持手动触发（用于测试）
   workflow_dispatch:
