@@ -61,9 +61,9 @@ class ChargeResult(Enum):
 
 
 def log(message: str):
-    """带时间戳的日志"""
+    """带时间戳的日志，并立即输出到 GitHub Actions"""
     now = datetime.now(TZ_BEIJING).strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{now}] {message}")
+    print(f"[{now}] {message}", flush=True)
 
 
 async def get_user_info(session: aiohttp.ClientSession) -> Optional[dict]:
