@@ -194,13 +194,29 @@ def find_power_off_record(logs: list) -> Optional[dict]:
 
 
 def is_port_free(portstatur: str, port: str) -> bool:
-    """检查端口是否空闲"""
+    """检查端口是否空闲：设备端口从1开始，Python下标从0开始"""
     try:
-        port_index = int(port)
-        if port_index >= len(portstatur):
+        port_number = int(port)
+        port_index = port_number - 1
+
+        if port_index < 0 or port_index >= len(portstatur):
+            log(
+                f"端口号超出范围: 端口={port}, "
+                f"状态字符串长度={len(portstatur)}"
+            )
             return False
-        return portstatur[port_index] == "0"
-    except (ValueError, IndexError):
+
+        status = portstatur[port_index]
+
+        log(
+            f"端口映射: 端口={port_number:02d}, "
+            f"字符串下标={port_index}, 状态={status}"
+        )
+
+        return status == "0"
+
+    except (ValueError, TypeError, IndexError) as e:
+        log(f"端口状态解析失败: {e}")
         return False
 
 
