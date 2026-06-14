@@ -1,16 +1,33 @@
 name: Neptune Auto Charge
 
 on:
-  # 1. 接收外部网络钩子（由 cron-job.org 准时触发）
+  # 1. 接收外部网络钩子，由 cron-job.org 触发
   repository_dispatch:
     types: [auto_charge]
-  
-  # 2. 支持在 GitHub 网页上手动点击运行（方便测试）
+
+  # 2. 支持在 GitHub 网页上手动运行
   workflow_dispatch:
+
+# 防止同一时间重复运行多个充电任务
+concurrency:
+  group: neptune-auto-charge
+  cancel-in-progress: false
+
+# 工作流只需要读取仓库内容
+permissions:
+  contents: read
 
 jobs:
   auto-charge:
     runs-on: ubuntu-latest
+
+    # 脚本正常情况下最多等待两次，每次10分钟
+    # 设置35分钟上限，避免异常情况下无限运行
+    timeout-minutes: 35
+
+    env:
+      # 让 Python 日志立即显示在 GitHub Actions 页面
+      PYTHONUNBUFFERED: "1"
 
     steps:
       - name: Checkout repository
@@ -19,18 +36,43 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
 
-      - name: Create .env file
+      - name: Create and check .env file
+        env:
+          NEPTUNE_OPEN_ID: ${{ secrets.NEPTUNE_OPEN_ID }}
+          NEPTUNE_AREA_ID: ${{ secrets.NEPTUNE_AREA_ID }}
+          NEPTUNE_EMPLOYEE_ID: ${{ secrets.NEPTUNE_EMPLOYEE_ID }}
         run: |
-          echo "NEPTUNE_OPEN_ID=${{ secrets.NEPTUNE_OPEN_ID }}" >> .env
-          echo "NEPTUNE_AREA_ID=${{ secrets.NEPTUNE_AREA_ID }}" >> .env
-          echo "NEPTUNE_EMPLOYEE_ID=${{ secrets.NEPTUNE_EMPLOYEE_ID }}" >> .env
+          # 检查Secrets是否存在，但不会输出真实内容
+          if [ -z "$NEPTUNE_OPEN_ID" ]; then
+            echo "::error::NEPTUNE_OPEN_ID 未设置或内容为空"
+            exit 1
+          fi
+
+          if [ -z "$NEPTUNE_AREA_ID" ]; then
+            echo "::error::NEPTUNE_AREA_ID 未设置或内容为空"
+            exit 1
+          fi
+
+          if [ -z "$NEPTUNE_EMPLOYEE_ID" ]; then
+            echo "::error::NEPTUNE_EMPLOYEE_ID 未设置或内容为空"
+            exit 1
+          fi
+
+          # 创建.env文件
+          printf 'NEPTUNE_OPEN_ID=%s\n' "$NEPTUNE_OPEN_ID" > .env
+          printf 'NEPTUNE_AREA_ID=%s\n' "$NEPTUNE_AREA_ID" >> .env
+          printf 'NEPTUNE_EMPLOYEE_ID=%s\n' "$NEPTUNE_EMPLOYEE_ID" >> .env
+
+          echo "配置文件创建成功，三个配置项均不为空"
 
       - name: Run auto charge script
         run: |
-          python main.py
+          echo "开始运行 Neptune 自动充电脚本"
+          python -u main.py
