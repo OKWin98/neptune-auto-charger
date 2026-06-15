@@ -111,7 +111,7 @@ async def begin_charge(
     params = {
         "devaddress": devaddress,
         "port": port,
-        "money": money,
+        "money": 7,
         "areaId": AREA_ID,
         "openId": OPEN_ID,
         "beforemoney": money,
